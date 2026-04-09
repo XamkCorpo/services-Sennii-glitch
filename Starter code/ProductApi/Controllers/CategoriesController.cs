@@ -19,7 +19,9 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(List<CategoryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<CategoryResponse>>> GetAll()
     {
         Result<List<CategoryResponse>> result = await _service.GetAllAsync();
 
@@ -30,7 +32,9 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryResponse>> GetById(int id)
     {
         Result<CategoryResponse> result = await _service.GetByIdAsync(id);
 
@@ -41,7 +45,9 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCategoryRequest request)
+    [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CategoryResponse>> Create(CreateCategoryRequest request)
     {
         Result<CategoryResponse> result = await _service.CreateAsync(request);
 
@@ -52,6 +58,8 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
         Result result = await _service.DeleteAsync(id);
