@@ -67,21 +67,21 @@ namespace ProductApi.Services
             }
         }
 
-        public async Task<Result> DeleteAsync(int id)
+        public async Task<Result<bool>> DeleteAsync(int id)
         {
             try
             {
                 bool deleted = await _repository.DeleteAsync(id);
 
                 if (!deleted)
-                    return Result.Failure($"Tuotetta {id} ei löytynyt");
+                    return Result.Failure<bool>($"Tuotetta {id} ei löytynyt");
 
-                return Result.Success();
+                return Result.Success(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Virhe kategorian poistamisessa: {CategoryId}", id);
-                return Result.Failure("Kategorian poistaminen epäonnistui");
+                return Result.Failure<bool>("Kategorian poistaminen epäonnistui");
             }
         }
 
