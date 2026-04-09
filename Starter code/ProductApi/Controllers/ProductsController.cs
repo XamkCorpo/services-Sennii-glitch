@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using ProductApi.Common;
 using ProductApi.Models.Dtos;
 using ProductApi.Services;
 
@@ -19,43 +20,55 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        List<ProductResponse> products = await _service.GetAllAsync();
-        return Ok(products);
+        Result<List<ProductResponse>> result = await _service.GetAllAsync();
+
+        if (result.IsFailure)
+            return StatusCode(500, new { error = result.Error });
+
+        return Ok(result.Value);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        ProductResponse? product = await _service.GetByIdAsync(id);
+        Result<ProductResponse> result = await _service.GetByIdAsync(id);
 
-        if (product == null)
-            return NotFound();
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
-        return Ok(product);
+        return Ok(result.Value);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductRequest request)
     {
-        ProductResponse created = await _service.CreateAsync(request);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        Result<ProductResponse> result = await _service.CreateAsync(request);
+
+        if (result.IsFailure)
+            return BadRequest(new { error = result.Error });
+
+        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateProductRequest request)
     {
-        ProductResponse? updated = await _service.UpdateAsync(id, request);
+        Result<ProductResponse> result = await _service.UpdateAsync(id, request);
 
-        if (updated == null)
-            return NotFound();
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
-        return Ok(updated);
+        return Ok(result.Value);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        bool deleted = await _service.DeleteAsync(id);
-        return deleted ? NoContent() : NotFound();
+        Result result = await _service.DeleteAsync(id);
+
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return NoContent();
     }
 }

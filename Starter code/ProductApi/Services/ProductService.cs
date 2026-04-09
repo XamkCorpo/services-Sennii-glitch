@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using ProductApi.Common;
 using ProductApi.Mappings;
 using ProductApi.Models;
 using ProductApi.Models.Dtos;
@@ -18,79 +19,89 @@ public class ProductService : IProductService
         _logger = logger;
     }
 
-    public async Task<List<ProductResponse>> GetAllAsync()
+    public async Task<Result<List<ProductResponse>>> GetAllAsync()
     {
         try
         {
             List<Product> products = await _repository.GetAllAsync();
-            return products.Select(p => p.ToResponse()).ToList();
+            List<ProductResponse> response = products.Select(p => p.ToResponse()).ToList();
+            return Result.Success(response);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Virhe tuotteiden haussa");
-            throw;
+            return Result.Failure<List<ProductResponse>>("Tuotteiden haku epäonnistui");
         }
     }
 
-    public async Task<ProductResponse?> GetByIdAsync(int id)
+    public async Task<Result<ProductResponse>> GetByIdAsync(int id)
     {
         try
         {
             Product? product = await _repository.GetByIdAsync(id);
-            return product?.ToResponse();
+
+            if (product == null)
+                return Result.Failure<ProductResponse>($"Tuotetta {id} ei löytynyt");
+
+            return Result.Success(product.ToResponse());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Virhe tuotteen haussa: {ProductId}", id);
-            throw;
+            return Result.Failure<ProductResponse>("Tuotteen haku epäonnistui");
         }
     }
 
-    public async Task<ProductResponse> CreateAsync(CreateProductRequest request)
+    public async Task<Result<ProductResponse>> CreateAsync(CreateProductRequest request)
     {
         try
         {
             Product product = request.ToEntity();
             Product created = await _repository.AddAsync(product);
-            return created.ToResponse();
+            return Result.Success(created.ToResponse());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Virhe tuotteen luomisessa: {ProductName}", request.Name);
-            throw;
+            return Result.Failure<ProductResponse>("Tuotteen luominen epäonnistui");
         }
     }
 
-    public async Task<ProductResponse?> UpdateAsync(int id, UpdateProductRequest request)
+    public async Task<Result<ProductResponse>> UpdateAsync(int id, UpdateProductRequest request)
     {
         try
         {
             Product? existing = await _repository.GetByIdAsync(id);
 
             if (existing == null)
-                return null;
+                return Result.Failure<ProductResponse>($"Tuotetta {id} ei löytynyt");
 
             request.UpdateEntity(existing);
             await _repository.UpdateAsync(existing);
-            return existing.ToResponse();
+            return Result.Success(existing.ToResponse());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Virhe tuotteen päivittämisessä: {ProductId}", id);
-            throw;
+            return Result.Failure<ProductResponse>("Tuotteen päivittäminen epäonnistui");
         }
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<Result> DeleteAsync(int id)
     {
         try
         {
-            return await _repository.DeleteAsync(id);
+            bool deleted = await _repository.DeleteAsync(id);
+
+            if (!deleted)
+                return Result.Failure($"Tuotetta {id} ei löytynyt");
+
+            return Result.Success();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Virhe tuotteen poistamisessa: {ProductId}", id);
-            throw;
+            return Result.Failure("Tuotteen poistaminen epäonnistui");
         }
     }
 }
