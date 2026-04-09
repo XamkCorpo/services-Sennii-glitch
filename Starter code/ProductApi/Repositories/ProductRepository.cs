@@ -30,12 +30,7 @@ public class ProductRepository : IProductRepository
         return product;
     }
 
-    public async Task UpdateAsync(Product product)
-    {
-        _context.Products.Update(product);
-        await _context.SaveChangesAsync();
-    }
-
+    
     public async Task<bool> DeleteAsync(int id)
     {
         Product? product = await _context.Products.FindAsync(id);
