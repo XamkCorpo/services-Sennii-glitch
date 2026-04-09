@@ -1,8 +1,7 @@
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ProductApi.Data;
-using ProductApi.Mappings;
 using ProductApi.Models.Dtos;
+using ProductApi.Services;
 
 namespace ProductApi.Controllers;
 
@@ -10,68 +9,53 @@ namespace ProductApi.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IProductService _service;
 
-    public ProductsController(AppDbContext context)
+    public ProductsController(IProductService service)
     {
-        _context = context;
+        _service = service;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var products = await _context.Products.ToListAsync();
-        var response = products.Select(p => p.ToResponse());
-        return Ok(response);
+        List<ProductResponse> products = await _service.GetAllAsync();
+        return Ok(products);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var product = await _context.Products.FindAsync(id);
+        ProductResponse? product = await _service.GetByIdAsync(id);
 
         if (product == null)
             return NotFound();
 
-        return Ok(product.ToResponse());
+        return Ok(product);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductRequest request)
     {
-        var product = request.ToEntity();
-
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = product.Id }, product.ToResponse());
+        ProductResponse created = await _service.CreateAsync(request);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateProductRequest request)
     {
-        var existing = await _context.Products.FindAsync(id);
+        ProductResponse? updated = await _service.UpdateAsync(id, request);
 
-        if (existing == null)
+        if (updated == null)
             return NotFound();
 
-        request.UpdateEntity(existing);
-        await _context.SaveChangesAsync();
-
-        return Ok(existing.ToResponse());
+        return Ok(updated);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var product = await _context.Products.FindAsync(id);
-
-        if (product == null)
-            return NotFound();
-
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        bool deleted = await _service.DeleteAsync(id);
+        return deleted ? NoContent() : NotFound();
     }
 }
