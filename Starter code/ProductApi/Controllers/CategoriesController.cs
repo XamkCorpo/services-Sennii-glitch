@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using ProductApi.Common;
 using ProductApi.Models.Dtos;
 using ProductApi.Services;
 
@@ -20,32 +21,44 @@ public class CategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        List<CategoryResponse> categories = await _service.GetAllAsync();
-        return Ok(categories);
+        Result<List<CategoryResponse>> result = await _service.GetAllAsync();
+
+        if (result.IsFailure)
+            return StatusCode(500, new { error = result.Error });
+
+        return Ok(result.Value);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        CategoryResponse? category = await _service.GetByIdAsync(id);
+        Result<CategoryResponse> result = await _service.GetByIdAsync(id);
 
-        if (category == null)
-            return NotFound();
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
-        return Ok(category);
+        return Ok(result.Value);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateCategoryRequest request)
     {
-        CategoryResponse created = await _service.CreateAsync(request);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        Result<CategoryResponse> result = await _service.CreateAsync(request);
+
+        if (result.IsFailure)
+            return BadRequest(new { error = result.Error });
+
+        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        bool deleted = await _service.DeleteAsync(id);
-        return deleted ? NoContent() : NotFound();
+        Result result = await _service.DeleteAsync(id);
+
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return NoContent();
     }
 }

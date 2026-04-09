@@ -1,4 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using ProductApi.Common;
 using ProductApi.Mappings;
 using ProductApi.Models;
 using ProductApi.Models.Dtos;
@@ -17,60 +19,69 @@ namespace ProductApi.Services
             _repository = repository;
             _logger = logger;
         }
-        public async Task<List<CategoryResponse>> GetAllAsync()
+        public async Task<Result<List<CategoryResponse>>> GetAllAsync()
         {
             try
             {
                 List<Category> categories = await _repository.GetAllAsync();
-                return categories.Select(p => p.ToResponse()).ToList();
+                List<CategoryResponse> response = categories.Select(p => p.ToResponse()).ToList();
+                return Result.Success(response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Virhe kategorioiden haussa");
-                throw;
+                return Result.Failure<List<CategoryResponse>>("Kategorioiden haku epäonnistui");
             }
         }
 
-        public async Task<CategoryResponse?> GetByIdAsync(int id)
+        public async Task<Result<CategoryResponse?>> GetByIdAsync(int id)
         {
             try
             {
                 Category? category = await _repository.GetByIdAsync(id);
-                return category?.ToResponse();
+                if (category == null)
+                    return Result.Failure<CategoryResponse>($"Kategoriaa {id} ei löytynyt");
+
+                return Result.Success(category.ToResponse());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Virhe kategorian haussa: {CategoryId}", id);
-                throw;
+                return Result.Failure<CategoryResponse>("Tuotteen haku epäonnistui");
             }
         }
 
-        public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest request)
+        public async Task<Result<CategoryResponse>> CreateAsync(CreateCategoryRequest request)
         {
             try
             {
                 Category category = request.ToEntity();
 
                 Category created = await _repository.AddAsync(category);
-                return created.ToResponse();
+                return Result.Success(created.ToResponse());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Virhe kategorian luomisessa: {CategoryName}", request.Name);
-                throw;
+                return Result.Failure<CategoryResponse>("Kategorian luominen epäonnistui");
             }
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<Result> DeleteAsync(int id)
         {
             try
             {
-                return await _repository.DeleteAsync(id);
+                bool deleted = await _repository.DeleteAsync(id);
+
+                if (!deleted)
+                    return Result.Failure($"Tuotetta {id} ei löytynyt");
+
+                return Result.Success();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Virhe kategorian poistamisessa: {CategoryId}", id);
-                throw;
+                return Result.Failure("Kategorian poistaminen epäonnistui");
             }
         }
 
